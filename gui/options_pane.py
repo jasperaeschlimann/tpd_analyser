@@ -19,6 +19,11 @@ class OptionsPane(QDockWidget):
         content_widget = QWidget()
         layout = QVBoxLayout(content_widget)
 
+        trimming_params_widget = QWidget()
+        trim_params_layout = QVBoxLayout(trimming_params_widget)
+
+        trim_params_title = QLabel("Trimming Parameters")
+        trim_params_layout.addWidget(trim_params_title)
         # Slope input
         slope_widget = QWidget()
         slope_layout = QHBoxLayout(slope_widget)
@@ -28,9 +33,9 @@ class OptionsPane(QDockWidget):
         self.slope_input.setText(str(self.slope_target))
         self.slope_input.setPlaceholderText("Enter target slope")
         slope_layout.addWidget(self.slope_input)
-        layout.addWidget(slope_widget)
+        trim_params_layout.addWidget(slope_widget)
         self.slope_error_label = QLabel("")
-        layout.addWidget(self.slope_error_label)
+        trim_params_layout.addWidget(self.slope_error_label)
 
         # Tolerance input
         tolerance_widget = QWidget()
@@ -41,9 +46,11 @@ class OptionsPane(QDockWidget):
         self.tolerance_input.setText(str(self.tolerance))
         self.tolerance_input.setPlaceholderText("Enter tolerance")
         tolerance_layout.addWidget(self.tolerance_input)
-        layout.addWidget(tolerance_widget)
+        trim_params_layout.addWidget(tolerance_widget)
         self.tolerance_error_label = QLabel("")
-        layout.addWidget(self.tolerance_error_label)
+        trim_params_layout.addWidget(self.tolerance_error_label)
+
+        layout.addWidget(trimming_params_widget)
 
         # Legend checkbox
         self.legend_checkbox = QCheckBox("Show Legend")
