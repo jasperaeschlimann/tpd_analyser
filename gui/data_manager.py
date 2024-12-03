@@ -19,6 +19,9 @@ class DataManager(QWidget):
         self.file_table.setHorizontalHeaderLabels(["Select", "File Name"])
         self.file_table.horizontalHeader().setStretchLastSection(True)
         self.file_table.verticalHeader().setVisible(False)
+        # Enable interaction with the header
+        header = self.file_table.horizontalHeader()
+        header.sectionClicked.connect(self.handle_header_click)
         layout.addWidget(self.file_table)
 
         # Populate the table with file names
@@ -34,6 +37,9 @@ class DataManager(QWidget):
         self.plot_button.clicked.connect(self.plot_selected_dataframes)
         layout.addWidget(self.plot_button)
 
+        # Track whether all checkboxes are currently checked
+        self.all_checked = False
+
     def populate_file_table(self):
         """Populates the table with file names and checkboxes."""
         self.file_table.setRowCount(len(self.dataframes)) # Sets number of rows to the length of dictionary of files:dataframes
@@ -45,7 +51,16 @@ class DataManager(QWidget):
             # Add file name
             file_name_item = QTableWidgetItem(file_name) # Prepares a table entry for file name
             file_name_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled) # Sets flags for making table entry selectable and not greyed out.
-            self.file_table.setItem(row, 1, file_name_item) # Sets row to contain the file name
+            self.file_table.setItem(row, 1, file_name_item) # Sets row to contain the file 
+            
+    def handle_header_click(self, index):
+        """Handles clicks on the header (toggle all checkboxes)."""
+        if index == 0:  # If "Select" header is clicked
+            self.all_checked = not self.all_checked  # Toggle the current state
+            for row in range(self.file_table.rowCount()):
+                checkbox = self.file_table.cellWidget(row, 0)
+                if checkbox:
+                    checkbox.setChecked(self.all_checked)
 
     def plot_selected_dataframes(self):
         """Sends the selected data to the MainWindow for plotting."""
