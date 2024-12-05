@@ -1,17 +1,24 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QCheckBox, QPushButton, QComboBox
+from PyQt5.QtWidgets import( 
+    QWidget, QVBoxLayout, QTableWidget, 
+    QTableWidgetItem, QCheckBox, QPushButton, 
+    QComboBox, QMdiSubWindow
+)
 from PyQt5.QtCore import Qt
 
-class DataManager(QWidget):
-    """Widget to display loaded file names and their DataFrames."""
-
-    def __init__(self, dataframes, main_window):
-        super().__init__()
+class DataManagerWindow(QMdiSubWindow):
+    """
+    Widget to display loaded file names and their DataFrames.
+    """
+    def __init__(self, dataframes, parent=None):
+        super().__init__(parent)
 
         self.dataframes = dataframes
-        self.main_window = main_window  # Reference to the MainWindow for plotting
+        self.main_window = parent  # Reference to the MainWindow for plotting
 
         # Layout for the viewer
-        layout = QVBoxLayout(self)
+        self.main_widget = QWidget()
+        self.setWidget(self.main_widget)
+        self.main_layout = QVBoxLayout()
 
         # Table to display file names with checkboxes
         self.file_table = QTableWidget()
@@ -22,7 +29,7 @@ class DataManager(QWidget):
         # Enable interaction with the header
         header = self.file_table.horizontalHeader()
         header.sectionClicked.connect(self.handle_header_click)
-        layout.addWidget(self.file_table)
+        self.main_layout.addWidget(self.file_table)
 
         # Populate the table with file names
         self.populate_file_table()
@@ -30,12 +37,14 @@ class DataManager(QWidget):
         # Dropdown to select plot type
         self.plot_type_dropdown = QComboBox()
         self.plot_type_dropdown.addItems(["Raw Data", "Trimmed Data"])
-        layout.addWidget(self.plot_type_dropdown)
+        self.main_layout.addWidget(self.plot_type_dropdown)
 
         # Add button to plot selected files
         self.plot_button = QPushButton("Plot Selected DataFrames")
         self.plot_button.clicked.connect(self.plot_selected_dataframes)
-        layout.addWidget(self.plot_button)
+        self.main_layout.addWidget(self.plot_button)
+
+        self.main_widget.setLayout(self.main_layout)
 
         # Track whether all checkboxes are currently checked
         self.all_checked = False

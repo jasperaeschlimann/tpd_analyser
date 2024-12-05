@@ -2,10 +2,7 @@ import os
 import io
 import pandas as pd
 import numpy as np
-from scipy.stats import linregress
 from scipy.ndimage import uniform_filter1d
-import matplotlib.pyplot as plt
-
 
 class DataLoader:
     """Handles the logic for loading and managing data from files."""
