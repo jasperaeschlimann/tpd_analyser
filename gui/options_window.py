@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QLabel, QWidget, QLineEdit, QPushButton, QCheckBox, QGridLayout, QMdiSubWindow
+from PyQt5.QtWidgets import QLabel, QWidget, QLineEdit, QPushButton, QGridLayout, QMdiSubWindow
 from PyQt5.QtCore import pyqtSignal, Qt
 from resources.fonts import OPTIONS_TITLE_FONT
 
@@ -7,15 +7,16 @@ class OptionsWindow(QMdiSubWindow):
     A submenu for users to manage options for slope, tolerance, and legend visibility.
     """
     # Signals to communicate changes back to the MainWindow
-    options_updated = pyqtSignal(float, float, bool)
+    options_updated = pyqtSignal(float, float)
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.setWindowTitle("Options")
+
         # Set default values for options
         self.slope_target = 1.0
         self.tolerance = 0.3
-        self.show_legend = True
 
         # Create the base options widget
         content_widget = QWidget()
@@ -48,11 +49,6 @@ class OptionsWindow(QMdiSubWindow):
         self.tolerance_error_label = QLabel("")
         layout.addWidget(self.tolerance_error_label, 4, 0, 1, 2)
 
-        # Legend checkbox
-        self.legend_checkbox = QCheckBox("Show Legend")
-        self.legend_checkbox.setChecked(self.show_legend)
-        layout.addWidget(self.legend_checkbox, 5, 0)
-
         # Apply button
         apply_button = QPushButton("Apply Changes")
         apply_button.clicked.connect(self.apply_changes)
@@ -76,7 +72,5 @@ class OptionsWindow(QMdiSubWindow):
         except ValueError:
             self.tolerance_error_label.setText("Invalid input for tolerance. Using previous value.")
 
-        self.show_legend = self.legend_checkbox.isChecked()
-
         # Emit the updated options
-        self.options_updated.emit(self.slope_target, self.tolerance, self.show_legend)
+        self.options_updated.emit(self.slope_target, self.tolerance)

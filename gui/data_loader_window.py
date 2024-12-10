@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QMdiSubWindow
 )
 from PyQt5.QtCore import Qt
-from gui.data_loader import DataLoader
+from backend.data_manager import DataManager
 
 class DataLoaderWindow(QMdiSubWindow):
     """
@@ -14,6 +14,9 @@ class DataLoaderWindow(QMdiSubWindow):
         super().__init__(parent)
 
         self.main_window = parent
+
+        self.setWindowTitle("Data Loader")
+        self.resize(300,600)
 
         # Create a widget window
         self.main_widget = QWidget()
@@ -51,7 +54,7 @@ class DataLoaderWindow(QMdiSubWindow):
 
         # Allow selecting multiple files
         files, _ = QFileDialog.getOpenFileNames( # Returns file paths
-            self, # Parent widget, in this case the main application window
+            self, 
             "Select .txt Files", # Title of file dialog window
             "", # Intial directory to open, blank means current directory
             "Text Files (*.txt);;All Files (*)", # File filters
@@ -73,7 +76,7 @@ class DataLoaderWindow(QMdiSubWindow):
         self.file_table.insertRow(row_position) # Inserts new entry into table on the next row
 
         file_name_item = QTableWidgetItem(file_name) # Creates table widget labelled as the file name
-        file_name_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled) # Sets item flags so that it is selectable and enabled (not grayed out)
+        file_name_item.setFlags(Qt.ItemIsEnabled) # Sets item flags so that it is selectable and enabled (not grayed out)
         self.file_table.setItem(row_position, 0, file_name_item) # Places the table widget in the first column of the row
 
     def load_data(self):
@@ -84,13 +87,16 @@ class DataLoaderWindow(QMdiSubWindow):
             print("No files loaded to process.")
             return
 
-        # Create an instance of DataLoader with the loaded files
-        self.data_loader = DataLoader(self.loaded_files)
+        # Create an instance of DataManager with the loaded files
+        self.main_window.data_manager = DataManager(self.loaded_files)
 
         # Load the dataframes
-        self.main_window.dataframes = self.data_loader.load_files_to_dataframes()
+        self.main_window.dataframes = self.main_window.data_manager.extract_data_to_dataframes()
 
         # Trim the data to the linear region
-        self.data_loader.trim_to_linear_region()
+        self.main_window.data_manager.trim_to_linear_region()
         
-        self.main_window.create_data_manager()
+        self.main_window.create_data_manager_window()
+
+        # Close the DataLoaderWindow
+        self.close()

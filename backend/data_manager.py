@@ -4,9 +4,10 @@ import pandas as pd
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 
-class DataLoader:
-    """Handles the logic for loading and managing data from files."""
-
+class DataManager:
+    """
+    Handles the logic for loading and managing data from files.
+    """
     def __init__(self, file_paths=None):
         """
         Initializes the DataLoader with optional file paths.
@@ -17,47 +18,45 @@ class DataLoader:
         self.dataframes = {}  # Dictionary to hold the loaded data
         self.trimmed_dataframes = {}  # Dictionary to hold trimmed data
 
-    def load_files_to_dataframes(self):
+    def extract_data_to_dataframes(self):
         """
         Processes the file paths to extract data and organize it into DataFrames.
 
         :return: A dictionary where keys are filenames and values are dictionaries of DataFrames.
         """
-        all_dataframes = {}
 
         for file_path in self.file_paths:
             # Extract the filename without the extension
             filename = os.path.splitext(os.path.basename(file_path))[0]
 
-            # Read the file, skipping metadata lines
+            # Read the file
             with open(file_path, 'r') as file:
-                lines = file.readlines()
+                lines = file.readlines() # List of entries of lines of file with a \n inserted at the end
 
             # Extract the 7th line (index 6) for headers
-            headers_line = lines[6].strip()
-            headers = [header.strip() for header in headers_line.split("\t") if header]
+            headers_line = lines[6].strip() # Removes white space, \t, \n etc at start and end of entry
+            headers = [header.strip() for header in headers_line.split("\t") if header] 
 
             # Combine remaining lines into a single string and load into a DataFrame
-            data_string = "\n".join(lines[7:])
-            df = pd.read_csv(io.StringIO(data_string), delimiter="\t", header=None, engine="python")
+            data_string = "\n".join(lines[7:]) # Combines all lines in list after headers line, with a single \n separating each line
+            df = pd.read_csv(io.StringIO(data_string), delimiter="\t", header=None, engine="python") # Passes string as a file like object which is readable by pd.read_csv
 
             # Create a dictionary to hold DataFrames for this file
             file_dataframes = {}
 
-            # Populate the dictionary with DataFrames dynamically named after headers
-            for i, header in enumerate(headers):
+            # Populate the dictionary with DataFrames dynamically linked to header keys
+            for i, header in enumerate(headers): # For each header, and the index of the header
                 start_col = i * 3
                 end_col = start_col + 3
-                subset_df = df.iloc[:, start_col:end_col]
-                subset_df.columns = subset_df.iloc[0]
+                subset_df = df.iloc[:, start_col:end_col] # Finds subset of dataframe corresponding to each header
+                subset_df.columns = subset_df.iloc[0] # Sets column headers to the first row of the subset dataframes
                 subset_df = subset_df[1:].reset_index(drop=True)
                 dataframe_name = f"{filename}_{header}"
-                file_dataframes[dataframe_name] = subset_df
+                file_dataframes[dataframe_name] = subset_df 
 
-            # Store the file-specific dictionary in the main dictionary
-            all_dataframes[filename] = file_dataframes
+            # Store the file-specific dictionary in the main dictionary and linked by a filename key
+            self.dataframes[filename] = file_dataframes
 
-        self.dataframes = all_dataframes
         return self.dataframes
 
     def trim_to_linear_region(self, target_slope=1.0, tolerance=0.3):

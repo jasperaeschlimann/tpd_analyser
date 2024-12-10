@@ -6,7 +6,7 @@ from gui.main_window import MainWindow
 def main():
     # Initialize the application
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon("TPD.ico"))
+    app.setWindowIcon(QIcon("resources/TPD.ico"))
     # Create an instance of the main window
     window = MainWindow()
     window.show()
