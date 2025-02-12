@@ -1,53 +1,38 @@
 import os
 from PyQt5.QtWidgets import (
-    QVBoxLayout, QWidget, QPushButton,QFileDialog, 
-    QTableWidget, QTableWidgetItem, QMdiSubWindow
+    QWidget,QFileDialog, QTableWidgetItem, 
+    QMdiSubWindow,QMessageBox
 )
 from PyQt5.QtCore import Qt
 from backend.data_manager import DataManager
+from PyQt5 import uic
 
 class DataLoaderWindow(QMdiSubWindow):
     """
-    window
+    Window for user to stage and load .txt data files into the data manager.
     """
     def __init__(self, parent=None):
+        # Call QMdiSubWindow constructor
         super().__init__(parent)
+        self.setMinimumSize(300,650)
 
+        # Initialise UI for Data Loader
+        self.content_widget = QWidget()
+        uic.loadUi("gui/data_loader_window.ui", self.content_widget)
+        self.content_widget.pushButton_StageFiles.clicked.connect(self.stage_files)
+        self.content_widget.pushButton_LoadFiles.clicked.connect(self.load_files)
+        self.setWidget(self.content_widget)
+        self.setAttribute(0x00000002) # Qt.WA_DeleteOnClose
+
+        # Placeholder for list of loaded file paths
+        self.loaded_files = []
+
+        # Sets parent as a callable attribute
         self.main_window = parent
 
-        self.setWindowTitle("Data Loader")
-        self.resize(300,600)
-
-        # Create a widget window
-        self.main_widget = QWidget()
-        self.setWidget(self.main_widget)
-        self.main_widget_layout = QVBoxLayout()
-
-        # Add a button to load files
-        self.load_files_button = QPushButton("Load Files")
-        self.load_files_button.clicked.connect(self.load_files)
-        self.main_widget_layout.addWidget(self.load_files_button)
-
-        # Add a table to display file names
-        self.file_table = QTableWidget()
-        self.file_table.setColumnCount(1)  # One column: File Name
-        self.file_table.setHorizontalHeaderLabels(["File Name"])
-        self.file_table.horizontalHeader().setStretchLastSection(True) # Sets last column header (File Name) to fill the remaining blank space in the table
-        self.file_table.verticalHeader().setVisible(False)  # Hide row numbers
-        self.file_table.setEditTriggers(QTableWidget.NoEditTriggers)  # Prevent editing
-        self.main_widget_layout.addWidget(self.file_table)
-
-        # Add the "Load Data" button
-        load_data_button = QPushButton("Load Data")
-        load_data_button.clicked.connect(self.load_data)
-        self.main_widget_layout.addWidget(load_data_button)
-
-        # Set the widget layout
-        self.main_widget.setLayout(self.main_widget_layout)
-
-    def load_files(self):
+    def stage_files(self):
         """
-        Opens a file dialog to select files and populates the table with file names.
+        Opens a file dialog to select files for staging and populates the table with their file names.
         """
         options = QFileDialog.Options() # Instantiate the QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog # Uses Qt style file dialogue
@@ -62,29 +47,29 @@ class DataLoaderWindow(QMdiSubWindow):
         )
 
         if files:
-            self.file_table.setRowCount(0)  # Clear the table before adding new rows
+            self.content_widget.tableWidget_LoadFiles.setRowCount(0)  # Clear the table before adding new rows
             self.loaded_files = files # Stores list of file paths in loaded_files for later use
             for file_path in files:
                 self.add_file_to_table(file_path) # For each file in list, file path gets added to table
 
     def add_file_to_table(self, file_path):
         """
-        Adds a single file to the table with its name.
+        Adds a single file to the table by displaying it's filename.
         """
         file_name = os.path.basename(file_path) # Extracts file name without path
-        row_position = self.file_table.rowCount() # Counts rows currently in table
-        self.file_table.insertRow(row_position) # Inserts new entry into table on the next row
+        row_position = self.content_widget.tableWidget_LoadFiles.rowCount() # Counts rows currently in table
+        self.content_widget.tableWidget_LoadFiles.insertRow(row_position) # Inserts new entry into table on the next row
 
         file_name_item = QTableWidgetItem(file_name) # Creates table widget labelled as the file name
         file_name_item.setFlags(Qt.ItemIsEnabled) # Sets item flags so that it is selectable and enabled (not grayed out)
-        self.file_table.setItem(row_position, 0, file_name_item) # Places the table widget in the first column of the row
+        self.content_widget.tableWidget_LoadFiles.setItem(row_position, 0, file_name_item) # Places the table widget in the first column of the row
 
-    def load_data(self):
+    def load_files(self):
         """
-        Handles the logic when 'Load Data' button is clicked.
+        Loads the staged files into the data manager, and calls the data manager window to open.
         """
         if not self.loaded_files: # Checks if loaded_files is 'falsy' i.e. is empty
-            print("No files loaded to process.")
+            QMessageBox.information(self, "No Files", "No files loaded to process.")
             return
 
         # Create an instance of DataManager with the loaded files
