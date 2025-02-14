@@ -25,7 +25,7 @@ class DataLoaderWindow(QMdiSubWindow):
         self.setAttribute(0x00000002) # Qt.WA_DeleteOnClose
 
         # Placeholder for list of loaded file paths
-        self.loaded_files = []
+        self.staged_files = []
 
         # Sets parent as a callable attribute
         self.main_window = parent
@@ -48,7 +48,7 @@ class DataLoaderWindow(QMdiSubWindow):
 
         if files:
             self.content_widget.tableWidget_LoadFiles.setRowCount(0)  # Clear the table before adding new rows
-            self.loaded_files = files # Stores list of file paths in loaded_files for later use
+            self.staged_files = files # Stores list of file paths in loaded_files for later use
             for file_path in files:
                 self.add_file_to_table(file_path) # For each file in list, file path gets added to table
 
@@ -68,19 +68,17 @@ class DataLoaderWindow(QMdiSubWindow):
         """
         Loads the staged files into the data manager, and calls the data manager window to open.
         """
-        if not self.loaded_files: # Checks if loaded_files is 'falsy' i.e. is empty
+        # Conditional statement to check if staged_files is 'falsy' i.e. user hasn't staged any files
+        if not self.staged_files: 
             QMessageBox.information(self, "No Files", "No files loaded to process.")
             return
 
-        # Create an instance of DataManager with the loaded files
-        self.main_window.data_manager = DataManager(self.loaded_files)
-
-        # Load the dataframes
+        # Create an instance of DataManager with the staged files, load them (with the extract method), and find linear regions
+        self.main_window.data_manager = DataManager(self.staged_files)
         self.main_window.dataframes = self.main_window.data_manager.extract_data_to_dataframes()
-
-        # Trim the data to the linear region
         self.main_window.data_manager.trim_to_linear_region()
         
+        # Trigger the creation of the data manager window in the parent main window
         self.main_window.create_data_manager_window()
 
         # Close the DataLoaderWindow
