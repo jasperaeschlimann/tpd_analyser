@@ -9,54 +9,54 @@ from PyQt5 import uic
 
 class DataLoaderWindow(QMdiSubWindow):
     """
-    Window for user to stage and load .txt data files into the data manager.
+    A Subwindow for staging and loading .txt data files into the data manager.
     """
-    # Signal that sends the loaded files list to the main window when load button is clicked
+    # Signal emitted when files are loaded, sending the file list to the main window
     files_loaded = pyqtSignal(list)
 
     def __init__(self):
-        # Call QMdiSubWindow constructor
+        """
+        Initialises the DataLoaderWindow UI and connects buttons to actions.
+        """
         super().__init__()
 
-        # Initialise UI for Data Loader
+        # Load UI
         self.content_widget = QWidget()
         uic.loadUi("gui/data_loader_window.ui", self.content_widget)
         self.setWindowIcon(QIcon("resources/icons/load.png"))
+        self.setWidget(self.content_widget)
+        self.setAttribute(0x00000002) # Qt.WA_DeleteOnClose ensures window is removed from memory when closed
+
+        # Connect UI elements to their respective functions
         self.content_widget.pushButton_StageFiles.clicked.connect(self.stage_files)
         self.content_widget.pushButton_LoadFiles.clicked.connect(self.load_files)
-        self.setWidget(self.content_widget)
-        self.setAttribute(0x00000002) # Qt.WA_DeleteOnClose
 
-        # Placeholder for list of staged files
+        # List to store staged file paths
         self.staged_files = []
 
     def stage_files(self):
         """
-        Opens a file dialog to select files for staging and populates the file table with their file names.
+        Opens a file dialog for users to select files and populates the file table.
         """
-        # Set Qt style file dialog instead of OS dialog
         options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog 
+        options |= QFileDialog.DontUseNativeDialog # Use Qt-stle file dialog
 
-        # Extracts user selected file paths 
-        files, _ = QFileDialog.getOpenFileNames( # Returns file paths
-            self, 
-            "Select .txt Files", # Title of file dialog window
-            "", # Intial directory to open, blank means current directory
-            "Text Files (*.txt);;All Files (*)", # File filters to restrict selection
-            options=options # Applies Qt style file dialog
+        # Open file dialog and allow multiple file selection 
+        files, _ = QFileDialog.getOpenFileNames( 
+            self, "Select .txt Files", "",
+            "Text Files (*.txt);;All Files (*)",
+            options=options
         )
 
-        # Adds staged files to the file table
         if files:
-            self.content_widget.tableWidget_LoadFiles.setRowCount(0)  # Clear the table before adding new rows
-            self.staged_files = files # Stores list of staged file paths for later check during load_files
+            self.staged_files = files # Store staged file paths
+            self.content_widget.tableWidget_LoadFiles.setRowCount(0)  # Clear existing entries
             for file_path in files:
-                self._add_file_to_table(file_path) # For each user selected file, file path gets added to file table
+                self._add_file_to_table(file_path) # Add each file to the table
 
     def _add_file_to_table(self, file_path):
         """
-        Adds a single file to the table by displaying it's filename.
+        Adds a file to the table widget displaying staged files.
 
         :param file_path: File path to process
         """
@@ -66,20 +66,18 @@ class DataLoaderWindow(QMdiSubWindow):
 
         # Extracts file name from the path and adds it in the new row
         file_name = os.path.basename(file_path) 
-        file_name_item = QTableWidgetItem(file_name) # Creates table widget labelled as the file name
-        self.content_widget.tableWidget_LoadFiles.setItem(row_position, 0, file_name_item) # Places the table widget in the first column of the row
+        file_name_item = QTableWidgetItem(file_name)
+        self.content_widget.tableWidget_LoadFiles.setItem(row_position, 0, file_name_item) 
 
     def load_files(self):
         """
-        Loads the staged files by sending them to the data manager.
+        Emits the list of staged files and closes the window.
         """
-        # Check if staged_files is 'falsy' i.e. user hasn't staged any files
+        # Check if user hasn't staged any files
         if not self.staged_files: 
             QMessageBox.information(self, "No Files", "No files loaded to process.")
             return
 
-        # Sends loaded files list to main window
+        # Emit signal to main window and close
         self.files_loaded.emit(self.staged_files)
-
-        # Close the DataLoaderWindow
         self.close()
