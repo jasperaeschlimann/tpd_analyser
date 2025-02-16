@@ -40,6 +40,7 @@ class DataLoaderWindow(QMdiSubWindow):
         """
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog # Use Qt-stle file dialog
+        options |= QFileDialog.ReadOnly  # Prevents file/folder modification
 
         # Open file dialog and allow multiple file selection 
         files, _ = QFileDialog.getOpenFileNames( 
