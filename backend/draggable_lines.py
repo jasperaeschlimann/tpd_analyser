@@ -66,14 +66,22 @@ class DraggableLines:
         Changes cursor when hovering near a trim line.
         """
         if event.inaxes != self.ax or event.xdata is None:
+            # Only reset if we previously changed it
+            if hasattr(self, "_cursor_changed") and self._cursor_changed:
+                self.canvas.set_cursor(1)
+                self._cursor_changed = False
             return
 
         for line in self.lines:
             if abs(event.xdata - line.get_xdata()[0]) < self.detection_range:
                 self.canvas.set_cursor(6)  # Horizontal resize cursor
+                self._cursor_changed = True  # Track that we modified the cursor
                 return
 
-        self.canvas.set_cursor(1)  # Default cursor
+        # Reset cursor only if it was set by this class
+        if hasattr(self, "_cursor_changed") and self._cursor_changed:
+            self.canvas.set_cursor(1)
+            self._cursor_changed = False
 
     def _on_click(self, event):
         """
