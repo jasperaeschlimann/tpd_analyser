@@ -25,12 +25,6 @@ class TrimmingOptionsWindow(QMdiSubWindow):
         """
         super().__init__()
 
-        # Default trimming parameters
-        self.slope_target = 1.0 # Target temperature slope
-        self.tolerance = 0.3    # Acceptable deviation from the target slope
-        self.smoothing_enabled = False  # Whether smoothing filter is applied
-        self.smoothing_window = 10  # Window size for smoothing
-
         # Load UI
         self.content_widget = QWidget()
         uic.loadUi("gui/trimming_options_window.ui", self.content_widget)
@@ -43,7 +37,7 @@ class TrimmingOptionsWindow(QMdiSubWindow):
         self.content_widget.pushButton_ApplyChanges.clicked.connect(self.apply_changes)
 
         # Disable smoothing input by default
-        self.content_widget.lineEdit_SmoothingWindow.setEnabled(self.smoothing_enabled)
+        self.content_widget.lineEdit_SmoothingWindow.setEnabled(False)
 
     def _toggle_smoothing_inputs(self, enabled):
         """
