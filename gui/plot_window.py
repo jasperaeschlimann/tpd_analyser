@@ -33,6 +33,9 @@ class PlotWindow(QMdiSubWindow):
         self.enable_trimming = enable_trimming 
         self.trim_boundaries = trim_boundaries
 
+        # State tracking for integration lines
+        self.integration_lines_added = 0
+
         # Set window properties
         self.setWindowIcon(QIcon("resources/icons/plot.png"))        
         self.setWindowTitle(f"Plot - {self.plot_type}")
@@ -53,6 +56,7 @@ class PlotWindow(QMdiSubWindow):
         self.toggle_legend_button.clicked.connect(self._toggle_legend)
         self.add_trim_button.clicked.connect(self._add_trim)
         self.save_trim_button.clicked.connect(self._save_trimming_boundaries)
+        self.add_peak_button.clicked.connect(self._add_integration)
         self.smooth_window_box.valueChanged.connect(self._update_smoothing_window)
 
         # Disable trimming buttons if trimming not enabled
@@ -87,13 +91,17 @@ class PlotWindow(QMdiSubWindow):
         # Plot data
         self.plot_backend.plot_data(self.ax_left, self.ax_right)
 
+        if self.ax_right is not None:
+            self.draggable_lines = DraggableLines(self.ax_right)
+        else:
+            self.draggable_lines = DraggableLines(self.ax_left)
+
         # Enable trim lines if required
         if self.enable_trimming:
-            self.draggable_lines = DraggableLines(self.ax_right, self.trim_boundaries)
-
-        # Prevent new trim lines if boundaries already exist
-        if self.trim_boundaries is not None:
-            self.add_trim_button.setEnabled(False)
+            # Prevent new trim lines if boundaries already exist
+            if self.trim_boundaries is not None:
+                self.draggable_lines.add_trim_lines(self.trim_boundaries)
+                self.add_trim_button.setEnabled(False)
 
         # Add Matplotlib toolbar
         toolbar_layout = self.toolbar_widget.layout()
@@ -131,12 +139,45 @@ class PlotWindow(QMdiSubWindow):
     def _update_smoothing_window(self, value):
         """
         Updates the smoothing window size and refreshes the plot when the user changes the spin box.
+
+        :param value: The new smoothing window size (integer) from the QSpinBox
         """
         # Update smoothing window size
         self.plot_backend.smoothing_window = value  
 
         # Clear and redraw graph
-        self.figure.clear()
-        self.ax_left, self.ax_right = self.plot_backend.configure_axes(self.figure)
+        self.ax_left.clear()
+        if self.ax_right:
+            self.ax_right.clear()
+
         self.plot_backend.plot_data(self.ax_left, self.ax_right)
+
+        # Re-initialise the draggable lines object to restore event connections
+        existing_integration_1 = self.draggable_lines.get_trim_positions("integration_1")
+        existing_integration_2 = self.draggable_lines.get_trim_positions("integration_2")
+        
+        self.draggable_lines = DraggableLines(self.ax_left)
+        
+        if existing_integration_1:
+            self.draggable_lines.add_trim_lines(trim_boundaries=existing_integration_1, line_type="integration_1")
+        if existing_integration_2:
+            self.draggable_lines.add_trim_lines(trim_boundaries=existing_integration_2, line_type="integration_2")
+
+        # Re-initialise plot legend
+        self.legend = self.figure.legend(loc="upper left")
+        self.legend.set_visible(False)
+        self.legend.set_draggable(True)
+
         self.plot_canvas.draw()
+
+    def _add_integration(self):
+        """
+        Handles adding two sets of integration lines:
+        """
+        if self.integration_lines_added == 0:
+            self.draggable_lines.add_trim_lines(line_type="integration_1")  # First integration region (blue)
+            self.integration_lines_added += 1
+        elif self.integration_lines_added == 1:
+            self.draggable_lines.add_trim_lines(line_type="integration_2")  # Second integration region (orange)
+            self.add_peak_button.setEnabled(False)  # Disable button after second integration region is added
+            self.integration_lines_added += 1

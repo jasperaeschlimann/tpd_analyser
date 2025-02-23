@@ -73,7 +73,6 @@ class PlotBackend:
 
                 # Ignore plotting Temperature vs. Temperature
                 if self.plot_type == "Trimmed Data - Temperature" and df_name == temp_df_name:
-                    print(f"Skipping Temperature vs. Temperature plot for {file_name}")
                     continue  # Skip this iteration
 
                 if self.plot_type == "Trimmed Data - Temperature":
