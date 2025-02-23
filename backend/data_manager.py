@@ -155,21 +155,31 @@ class DataManager(QObject):
         """
         if file_name not in self.dataframes:
             return
-        
-        # Ensure `trimmed_dataframes` exists for this file
+
+        # Ensure `trimmed_dataframes` exists
         if file_name not in self.trimmed_dataframes:
             self.trimmed_dataframes[file_name] = {}
 
         # Store updated trim boundaries
         self.trim_regions[file_name] = (trim_start_time, trim_end_time)
 
-        # Trim each DataFrame
+        # Use the temperature dataframe as the reference for trimming
+        reference_df_name = next((df_name for df_name in self.dataframes[file_name] if "Temp" in df_name), None)  
+        if reference_df_name is None:
+            reference_df_name = list(self.dataframes[file_name].keys())[0]  # Use the first dataframe
+        reference_df = self.dataframes[file_name][reference_df_name]
+        
+        # Find indices where time is within the trim boundaries
+        valid_indices = reference_df[(reference_df.iloc[:, 0] >= trim_start_time) & 
+                                    (reference_df.iloc[:, 0] <= trim_end_time)].index
+
+        if valid_indices.empty:
+            return
+
+        # Apply trimming based on these indices
         for df_name, df in self.dataframes[file_name].items():
-
-            trimmed_df = df[(df.iloc[:, 0] >= trim_start_time) & 
-                            (df.iloc[:, 0] <= trim_end_time)].reset_index(drop=True)
-
-            self.trimmed_dataframes[file_name][df_name] = trimmed_df
+            df = df.loc[df.index.intersection(valid_indices)].reset_index(drop=True)
+            self.trimmed_dataframes[file_name][df_name] = df
 
     def get_trim_boundaries(self, file_name):
         """
