@@ -155,6 +155,10 @@ class DataManager(QObject):
         """
         if file_name not in self.dataframes:
             return
+        
+        # Ensure `trimmed_dataframes` exists for this file
+        if file_name not in self.trimmed_dataframes:
+            self.trimmed_dataframes[file_name] = {}
 
         # Store updated trim boundaries
         self.trim_regions[file_name] = (trim_start_time, trim_end_time)
