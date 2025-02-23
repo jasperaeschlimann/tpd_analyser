@@ -15,7 +15,7 @@ class PlotBackend:
         self.dataframes = dataframes
         self.selected_files_and_dfs = selected_files_and_dfs
         self.plot_type = plot_type
-        self.smoothing_window = 5
+        self.smoothing_window = 1
 
     def configure_axes(self, figure):
         """

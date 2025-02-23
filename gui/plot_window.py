@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMdiSubWindow, QWidget, QPushButton
+from PyQt5.QtWidgets import QMdiSubWindow, QWidget, QPushButton, QSpinBox
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5 import uic
@@ -46,16 +46,24 @@ class PlotWindow(QMdiSubWindow):
         self.toggle_legend_button = self.content_widget.findChild(QPushButton, "pushButton_ToggleLegend")
         self.add_trim_button = self.content_widget.findChild(QPushButton, "pushButton_AddTrim")
         self.save_trim_button = self.content_widget.findChild(QPushButton, "pushButton_SaveTrim")
+        self.add_peak_button = self.content_widget.findChild(QPushButton, "pushButton_AddPeak")
+        self.smooth_window_box = self.content_widget.findChild(QSpinBox, "spinBox_SmoothWindow")
 
         # Connect UI elemenents
         self.toggle_legend_button.clicked.connect(self._toggle_legend)
         self.add_trim_button.clicked.connect(self._add_trim)
         self.save_trim_button.clicked.connect(self._save_trimming_boundaries)
+        self.smooth_window_box.valueChanged.connect(self._update_smoothing_window)
 
         # Disable trimming buttons if trimming not enabled
         if not self.enable_trimming:
             self.save_trim_button.setEnabled(False)
             self.add_trim_button.setEnabled(False)
+
+        # Disable adding peaks and smoothing temp unless trimmed data - temp plot
+        if not self.plot_type == "Trimmed Data - Temperature":
+            self.add_peak_button.setEnabled(False)
+            self.smooth_window_box.setEnabled(False)
 
         # Initialise plot
         self.plot_backend = PlotBackend(self.dataframes, self.selected_files_and_dfs, self.plot_type)
@@ -119,3 +127,16 @@ class PlotWindow(QMdiSubWindow):
         file_name = list(self.selected_files_and_dfs.keys())[0]  # Assuming one file at a time
         
         self.trim_boundaries_updated.emit(file_name, trim_start, trim_end)  # Emit signal to MainWindow
+
+    def _update_smoothing_window(self, value):
+        """
+        Updates the smoothing window size and refreshes the plot when the user changes the spin box.
+        """
+        # Update smoothing window size
+        self.plot_backend.smoothing_window = value  
+
+        # Clear and redraw graph
+        self.figure.clear()
+        self.ax_left, self.ax_right = self.plot_backend.configure_axes(self.figure)
+        self.plot_backend.plot_data(self.ax_left, self.ax_right)
+        self.plot_canvas.draw()
