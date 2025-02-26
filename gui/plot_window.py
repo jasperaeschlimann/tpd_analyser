@@ -14,6 +14,8 @@ class PlotWindow(QMdiSubWindow):
     """
     # Signal to communicate new trimming boundaries to MainWindow
     trim_boundaries_updated = pyqtSignal(str, float, float) 
+    # Signal to trigger monolayer calibration (integration)
+    monolayer_calibration_requested = pyqtSignal(dict, int, tuple)
 
     def __init__(self, selected_files_and_dfs, dataframes, trim_boundaries, plot_type="Raw", enable_trimming=False):
         """
@@ -51,6 +53,7 @@ class PlotWindow(QMdiSubWindow):
         self.save_trim_button = self.content_widget.findChild(QPushButton, "pushButton_SaveTrim")
         self.add_peak_button = self.content_widget.findChild(QPushButton, "pushButton_AddPeak")
         self.smooth_window_box = self.content_widget.findChild(QSpinBox, "spinBox_SmoothWindow")
+        self.monolayer_calibration_button = self.content_widget.findChild(QPushButton, "pushButton_Monolayer")
 
         # Connect UI elemenents
         self.toggle_legend_button.clicked.connect(self._toggle_legend)
@@ -58,6 +61,7 @@ class PlotWindow(QMdiSubWindow):
         self.save_trim_button.clicked.connect(self._save_trimming_boundaries)
         self.add_peak_button.clicked.connect(self._add_integration)
         self.smooth_window_box.valueChanged.connect(self._update_smoothing_window)
+        self.monolayer_calibration_button.clicked.connect(self._monolayer_calibration)
 
         # Disable trimming buttons if trimming not enabled
         if not self.enable_trimming:
@@ -68,6 +72,7 @@ class PlotWindow(QMdiSubWindow):
         if not self.plot_type == "Trimmed Data - Temperature":
             self.add_peak_button.setEnabled(False)
             self.smooth_window_box.setEnabled(False)
+            self.monolayer_calibration_button.setEnabled(False)
 
         # Initialise plot
         self.plot_backend = PlotBackend(self.dataframes, self.selected_files_and_dfs, self.plot_type)
@@ -152,16 +157,12 @@ class PlotWindow(QMdiSubWindow):
 
         self.plot_backend.plot_data(self.ax_left, self.ax_right)
 
-        # Re-initialise the draggable lines object to restore event connections
-        existing_integration_1 = self.draggable_lines.get_trim_positions("integration_1")
-        existing_integration_2 = self.draggable_lines.get_trim_positions("integration_2")
-        
+        # Retrieve existing integration boundaries
+        existing_integration = self.draggable_lines.get_trim_positions("integration")
         self.draggable_lines = DraggableLines(self.ax_left)
-        
-        if existing_integration_1:
-            self.draggable_lines.add_trim_lines(trim_boundaries=existing_integration_1, line_type="integration_1")
-        if existing_integration_2:
-            self.draggable_lines.add_trim_lines(trim_boundaries=existing_integration_2, line_type="integration_2")
+        if existing_integration:
+            int1_left, int1_right, int2_left, int2_right = existing_integration
+            self.draggable_lines.add_trim_lines(trim_boundaries=(int1_left, int1_right, int2_left, int2_right), line_type="integration")
 
         # Re-initialise plot legend
         self.legend = self.figure.legend(loc="upper left")
@@ -174,10 +175,14 @@ class PlotWindow(QMdiSubWindow):
         """
         Handles adding two sets of integration lines:
         """
-        if self.integration_lines_added == 0:
-            self.draggable_lines.add_trim_lines(line_type="integration_1")  # First integration region (blue)
-            self.integration_lines_added += 1
-        elif self.integration_lines_added == 1:
-            self.draggable_lines.add_trim_lines(line_type="integration_2")  # Second integration region (orange)
-            self.add_peak_button.setEnabled(False)  # Disable button after second integration region is added
-            self.integration_lines_added += 1
+        self.draggable_lines.add_trim_lines(line_type="integration")  
+        self.add_peak_button.setEnabled(False)  
+
+    def _monolayer_calibration(self):
+        """
+        Emits a signal to perform monolayer calibration (integration) on the selected files and DataFrames.
+        """
+        integration_boundaries = self.draggable_lines.get_trim_positions("integration")
+        print(integration_boundaries)
+        smoothing_window = self.smooth_window_box.value()  # Get current smoothing value
+        self.monolayer_calibration_requested.emit(self.selected_files_and_dfs, smoothing_window, integration_boundaries)
