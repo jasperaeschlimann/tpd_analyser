@@ -23,7 +23,7 @@ class DraggableLines:
         self.ax = ax
         self.figure = ax.figure
         self.canvas = self.figure.canvas
-        self.lines = {"trim": [], "integration_1": [], "integration_2": []}  # Store multiple sets
+        self.lines = {"trim": [], "integration": []}  # Store multiple sets
 
         self.selected_line = None  # Track the selected line
         self.is_dragging = False  # Track dragging state
@@ -43,38 +43,49 @@ class DraggableLines:
         :param line_type: "trim" (red), "integration_1" (blue, 15-25% left), or "integration_2" (orange, 15-25% right).
         """
         if line_type not in self.lines:
-            raise ValueError("Invalid line_type. Must be 'trim', 'integration_1', or 'integration_2'.")
+            raise ValueError("Invalid line_type. Must be 'trim' or 'integration'.")
 
         x_min, x_max = self.ax.get_xlim()  # Get current x-axis range
 
         if line_type == "trim":
-            # Keep trimming behavior unchanged (default placement if not provided)
+            # Default placement if not provided
             if trim_boundaries is not None:
                 x1, x2 = trim_boundaries
             else:
                 x1, x2 = x_min + 10, x_max - 10  
 
-        elif line_type == "integration_1":
-            # Place 15% and 25% from the left
-            x1 = x_min + 0.15 * (x_max - x_min)
-            x2 = x_min + 0.25 * (x_max - x_min)
+            color = "r"
 
-        elif line_type == "integration_2":
-            # Place 15% and 25% from the right
-            x1 = x_max - 0.25 * (x_max - x_min)
-            x2 = x_max - 0.15 * (x_max - x_min)
+            # Create and store trim lines
+            trim_line1 = Line2D([x1, x1], self.ax.get_ylim(), color=color, linestyle="-", linewidth=2, label="Trim Start")
+            trim_line2 = Line2D([x2, x2], self.ax.get_ylim(), color=color, linestyle="-", linewidth=2, label="Trim End")
 
-        # Define colors for different line sets
-        color_map = {"trim": "r", "integration_1": "b", "integration_2": "orange"}
-        color = color_map[line_type]
+            self.lines["trim"] = [trim_line1, trim_line2]
 
-        # Create vertical lines
-        line1 = Line2D([x1, x1], self.ax.get_ylim(), color=color, linestyle="-", linewidth=2, label=f"{line_type} Start")
-        line2 = Line2D([x2, x2], self.ax.get_ylim(), color=color, linestyle="-", linewidth=2, label=f"{line_type} End")
+        elif line_type == "integration":
+            if trim_boundaries:
+                x1_1, x1_2, x2_1, x2_2 = trim_boundaries
+            else:
+                # Place integration lines at left (15%-25%) and right (75%-85%) of the x-range
+                x1_1 = x_min + 0.15 * (x_max - x_min)
+                x1_2 = x_min + 0.25 * (x_max - x_min)
 
-        # Store lines in the dictionary
-        self.lines[line_type] = [line1, line2]
+                x2_1 = x_max - 0.25 * (x_max - x_min)
+                x2_2 = x_max - 0.15 * (x_max - x_min)
 
+            # Colors for left (blue) and right (orange)
+            colors = ["blue", "orange"]
+
+            # Create and store integration lines
+            int1_left = Line2D([x1_1, x1_1], self.ax.get_ylim(), color=colors[0], linestyle="-", linewidth=2, label="Integration Left Start")
+            int1_right = Line2D([x1_2, x1_2], self.ax.get_ylim(), color=colors[0], linestyle="-", linewidth=2, label="Integration Left End")
+
+            int2_left = Line2D([x2_1, x2_1], self.ax.get_ylim(), color=colors[1], linestyle="-", linewidth=2, label="Integration Right Start")
+            int2_right = Line2D([x2_2, x2_2], self.ax.get_ylim(), color=colors[1], linestyle="-", linewidth=2, label="Integration Right End")
+
+            self.lines["integration"] = [int1_left, int1_right, int2_left, int2_right]
+
+        # Add all lines to the plot
         for line in self.lines[line_type]:
             self.ax.add_line(line)
 
@@ -155,12 +166,22 @@ class DraggableLines:
         """
         Returns the current trim line positions for a given type.
 
-        :param line_type: "trim", "integration_1", or "integration_2"
-        :return: Tuple (start_x, end_x) for the specified line type
+        :param line_type: "trim" or "integration"
+        :return: Tuple (start_x, end_x) for trim, or (left_start, left_end, right_start, right_end) for integration
         """
         if line_type not in self.lines or not self.lines[line_type]:
             return None
 
-        return self.lines[line_type][0].get_xdata()[0], self.lines[line_type][1].get_xdata()[0]
-
+        if line_type == "trim":
+            return (
+                self.lines[line_type][0].get_xdata()[0],
+                self.lines[line_type][1].get_xdata()[0]
+            )
+        elif line_type == "integration":
+            return (
+                self.lines[line_type][0].get_xdata()[0],  # Left start
+                self.lines[line_type][1].get_xdata()[0],  # Left end
+                self.lines[line_type][2].get_xdata()[0],  # Right start
+                self.lines[line_type][3].get_xdata()[0]   # Right end
+        )
     
