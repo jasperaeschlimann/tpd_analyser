@@ -6,19 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>500</width>
+    <width>700</width>
     <height>500</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
   <property name="minimumSize">
    <size>
-    <width>350</width>
+    <width>700</width>
     <height>300</height>
    </size>
   </property>
@@ -26,12 +26,46 @@
    <string>Data Manager</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
-   <item row="0" column="0">
+   <item row="0" column="1">
     <layout class="QGridLayout" name="gridLayout">
      <property name="sizeConstraint">
       <enum>QLayout::SetMinimumSize</enum>
      </property>
-     <item row="1" column="0">
+     <item row="0" column="0">
+      <widget class="QTreeWidget" name="treeWidget_Files">
+       <property name="selectionMode">
+        <enum>QAbstractItemView::MultiSelection</enum>
+       </property>
+       <column>
+        <property name="text">
+         <string>Select</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>File/Dataframe Name</string>
+        </property>
+       </column>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QWidget" name="globalcheckboxWidget" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>300</width>
+         <height>0</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3"/>
+      </widget>
+     </item>
+     <item row="1" column="0" colspan="2">
       <widget class="QComboBox" name="comboBox_PlotType">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -61,7 +95,7 @@
        </item>
       </widget>
      </item>
-     <item row="2" column="0">
+     <item row="2" column="0" colspan="2">
       <widget class="QPushButton" name="pushButton_Plot">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -72,23 +106,6 @@
        <property name="text">
         <string>Plot</string>
        </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QTreeWidget" name="treeWidget_Files">
-       <property name="selectionMode">
-        <enum>QAbstractItemView::MultiSelection</enum>
-       </property>
-       <column>
-        <property name="text">
-         <string>Select</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>File/Dataframe Name</string>
-        </property>
-       </column>
       </widget>
      </item>
     </layout>

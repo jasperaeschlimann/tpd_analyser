@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import( 
     QWidget, QMdiSubWindow, 
-    QTreeWidgetItem, QMessageBox
+    QTreeWidgetItem, QMessageBox, QCheckBox
 )
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -28,6 +28,8 @@ class DataManagerWindow(QMdiSubWindow):
         # Load UI
         self.content_widget = QWidget()
         uic.loadUi("gui/data_manager_window.ui", self.content_widget)
+        self.global_checkbox_widget = self.content_widget.findChild(QWidget, "globalcheckboxWidget")
+        self.global_checkbox_layout = self.global_checkbox_widget.layout()
         self.content_widget.pushButton_Plot.clicked.connect(self.plot_selected_dataframes)
         self.setWindowIcon(QIcon("resources/icons/manager.png"))
         self.setWidget(self.content_widget)
@@ -35,14 +37,22 @@ class DataManagerWindow(QMdiSubWindow):
         # Populate the tree widget with files and their respective DataFrames
         self._populate_tree()
 
+        # Create global checkboxes
+        self._add_global_checkboxes()
+
         # Connect double-click event to function
         self.content_widget.treeWidget_Files.itemDoubleClicked.connect(self._handle_double_click)
 
     def _populate_tree(self):
         """
-        Populates the QTreeWidget with files and their corresponding DataFrames.
+        Populates the tree with files and their corresponding DataFrames.
         """
+        self.unique_dataframe_types = set()  
+
         for file_name, dataframes in self.dataframes.items():
+            for df_name in dataframes.keys():
+                df_type = "_".join(df_name.split("_")[3:])  # Assumes file name structure: Xe_5k_1_Xe-129
+                self.unique_dataframe_types.add(df_type)  # Add only unique dataframe types
             self._add_file_with_dataframes(file_name, dataframes)
 
     def _add_file_with_dataframes(self, file_names, dataframe_names):
@@ -77,6 +87,61 @@ class DataManagerWindow(QMdiSubWindow):
             # Apply the same state to all child items (DataFrames)
             for i in range(item.childCount()):
                 item.child(i).setCheckState(0, state)
+
+    def _add_global_checkboxes(self):
+        """
+        Creates checkboxes for global selection of DataFrame types.
+        """
+        self.global_checkboxes = {}
+
+        # Add and connect global checkboxes from the unique DataFrame names
+        for df_type in sorted(self.unique_dataframe_types):
+            checkbox = QCheckBox(df_type)
+            checkbox.stateChanged.connect(lambda state, dtype=df_type: self._toggle_global_dataframe_selection(dtype, state))
+            self.global_checkbox_layout.addWidget(checkbox)
+            self.global_checkboxes[df_type] = checkbox
+
+    def _toggle_global_dataframe_selection(self, dataframe_type, state):
+        """
+        Toggles all occurrences of a specific DataFrame type in the tree.
+        """
+        check_state = Qt.Checked if state == Qt.Checked else Qt.Unchecked
+
+        for i in range(self.content_widget.treeWidget_Files.topLevelItemCount()):
+            file_item = self.content_widget.treeWidget_Files.topLevelItem(i)
+            for j in range(file_item.childCount()):
+                df_item = file_item.child(j)
+
+                # Extract the Data Type from full DataFrame name
+                df_type = "_".join(df_item.text(1).split("_")[3:])  # Keeps only Xe-129, Xe-131, etc.
+
+                if df_type == dataframe_type:
+                    df_item.setCheckState(0, check_state)
+
+    def _toggle_dataframe_type_checkboxes(self, item):
+        """
+        Ensures that when a DataFrame type is checked/unchecked, all corresponding DataFrames across files follow the same state.
+
+        :param item: The QTreeWidgetItem that was toggled.
+        """
+        if item.parent() and item.parent().text(1) == "Select DataFrame Type":  
+            # If this is a dataframe-type selector, find its state
+            selected_type = item.text(1)
+            state = item.checkState(0)
+
+            # Iterate over all files and check/uncheck the matching DataFrames
+            for i in range(self.content_widget.treeWidget_Files.topLevelItemCount()):
+                file_item = self.content_widget.treeWidget_Files.topLevelItem(i)
+
+                # Ignore the first parent item (Select DataFrame Type)
+                if file_item.text(1) == "Select DataFrame Type":
+                    continue  
+
+                # Iterate over child DataFrames and match the type
+                for j in range(file_item.childCount()):
+                    df_item = file_item.child(j)
+                    if df_item.text(1) == selected_type:
+                        df_item.setCheckState(0, state)
 
     def _handle_double_click(self, item):
         """
