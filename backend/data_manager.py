@@ -1,9 +1,12 @@
 import os
 import io
+import re
 import pandas as pd
 import numpy as np
 from scipy.ndimage import uniform_filter1d
+from scipy.integrate import simps
 from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtWidgets import QMessageBox
 
 class DataManager(QObject):
     """
@@ -190,3 +193,66 @@ class DataManager(QObject):
         """
         return self.trim_regions.get(file_name, None)
     
+    def extract_dosage_from_filename(self, file_name):
+        """
+        Extracts dosage value from a filename in the format 'Xe_5K_1' or 'Xe_5k_1'.
+
+        :param file_name: The name of the file.
+        :return: The extracted dosage as an integer, or None if extraction fails.
+        """
+        match = re.search(r"_(\d+)[kK]_", file_name)  # Match number before 'K' or 'k'
+        if match:
+            return int(match.group(1))
+        return None  # Return None if no match is found
+
+    def perform_full_integration(self, selected_files_and_dfs, smoothing_window):
+        """
+        Performs full integration of ion current over the entire trimmed temperature range,
+        but only for the selected files and DataFrames.
+
+        - Applies a smoothing filter before integration.
+        - Uses Simpson's rule for numerical integration.
+        - Extracts dosage from the filename.
+        - Ensures the temperature DataFrame is used even if not explicitly selected.
+
+        :param selected_files_and_dfs: Dictionary containing selected files and their chosen DataFrame names.
+        :return: Dictionary mapping dosage values to integrated values.
+        """
+        integration_results = {}  # Store dictionary {dosage: integrated_value}
+
+        for file_name, selected_df_names in selected_files_and_dfs.items():
+            dosage = self.extract_dosage_from_filename(file_name)  # Use new function
+            if dosage is None:
+                QMessageBox.warning(self, f"Warning: Unable to extract dosage from {file_name}")
+                continue
+
+            # Find temperature DataFrame (assumed to be the last DataFrame)
+            temp_df_name = next((df_name for df_name in self.trimmed_dataframes[file_name] if "Temp" in df_name), None)
+            if temp_df_name is None:
+                continue  # Skip if no temperature DataFrame exists
+
+            temp_df = self.trimmed_dataframes[file_name][temp_df_name]
+            temperature = temp_df.iloc[:, 1].to_numpy()  # Temperature values
+
+            # Apply smoothing filter
+            smoothed_temperature = uniform_filter1d(temperature, size=smoothing_window)
+
+            # Sum the integration from all selected ion current DataFrames
+            total_integrated_value = 0
+
+            for df_name in selected_df_names:
+                if df_name == temp_df_name:  # Ignore temperature DataFrame itself
+                    continue
+
+                ion_current = self.trimmed_dataframes[file_name][df_name].iloc[:, 1].to_numpy()  # Ion current values
+
+                # Perform full integration over the entire trimmed temperature range
+                integrated_value = simps(ion_current, smoothed_temperature)
+
+                total_integrated_value += integrated_value
+
+            # Store the total integration result
+            integration_results[dosage] = total_integrated_value
+
+        return integration_results
+
