@@ -63,6 +63,8 @@ class PlotWindow(QMdiSubWindow):
         self.smooth_window_box.valueChanged.connect(self._update_smoothing_window)
         self.monolayer_calibration_button.clicked.connect(self._monolayer_calibration)
 
+        self.monolayer_calibration_button.setEnabled(False)
+
         # Disable trimming buttons if trimming not enabled
         if not self.enable_trimming:
             self.save_trim_button.setEnabled(False)
@@ -72,7 +74,6 @@ class PlotWindow(QMdiSubWindow):
         if not self.plot_type == "Trimmed Data - Temperature":
             self.add_peak_button.setEnabled(False)
             self.smooth_window_box.setEnabled(False)
-            self.monolayer_calibration_button.setEnabled(False)
 
         # Initialise plot
         self.plot_backend = PlotBackend(self.dataframes, self.selected_files_and_dfs, self.plot_type)
@@ -177,6 +178,7 @@ class PlotWindow(QMdiSubWindow):
         """
         self.draggable_lines.add_trim_lines(line_type="integration")  
         self.add_peak_button.setEnabled(False)  
+        self.monolayer_calibration_button.setEnabled(True)
 
     def _monolayer_calibration(self):
         """
