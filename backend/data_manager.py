@@ -200,10 +200,17 @@ class DataManager(QObject):
         :param file_name: The name of the file.
         :return: The extracted dosage as an integer, or None if extraction fails.
         """
-        match = re.search(r"_(\d+)[kK]_", file_name)  # Match number before 'K' or 'k'
+        # Ensure we start matching after the first '_'
+        match = re.search(r"(\d{1,3}[.,]?\d*)[kK]_", file_name.split("_", 1)[-1]) 
+
         if match:
-            return int(match.group(1))
-        return None  # Return None if no match is found
+            dosage_str = match.group(1).replace(",", ".")  # Convert ',' to '.'
+            try:
+                return float(dosage_str)  # Return as float
+            except ValueError:
+                return None  # If conversion fails, return None
+
+        return None  # No match found
 
     def perform_full_integration(self, selected_files_and_dfs, smoothing_window):
         """
@@ -223,7 +230,7 @@ class DataManager(QObject):
         for file_name, selected_df_names in selected_files_and_dfs.items():
             dosage = self.extract_dosage_from_filename(file_name)  # Use new function
             if dosage is None:
-                QMessageBox.warning(self, f"Warning: Unable to extract dosage from {file_name}")
+                QMessageBox.warning(None, "Extraction Error", f"Warning: Unable to extract dosage from {file_name}")
                 continue
 
             # Find temperature DataFrame (assumed to be the last DataFrame)
@@ -255,4 +262,71 @@ class DataManager(QObject):
             integration_results[dosage] = total_integrated_value
 
         return integration_results
+
+    def perform_ratio_integration(self, selected_files_and_dfs, smoothing_window, integration_boundaries):
+        """
+        Performs integration of ion current over the selected temperature range.
+
+        :param selected_files_and_dfs: Dictionary containing selected files and their chosen DataFrame names.
+        :param smoothing_window: Window size for 1D smoothing filter.
+        :param integration_boundaries: Tuple (left_start_temp, left_end_temp, right_start_temp, right_end_temp).
+        :return: Dictionary mapping file names to integration ratios.
+        """
+        left_start_temp, left_end_temp, right_start_temp, right_end_temp = integration_boundaries
+
+        integration_ratios = {}  # Store ratio of left/right integration for each file
+
+        for file_name, selected_df_names in selected_files_and_dfs.items():
+            dosage = self.extract_dosage_from_filename(file_name)  # Use new function
+            if dosage is None:
+                QMessageBox.warning(None, "Extraction Error", f"Warning: Unable to extract dosage from {file_name}")
+                continue
+            
+            # Find temperature DataFrame (assumed to be the last DataFrame)
+            temp_df_name = next((df_name for df_name in self.trimmed_dataframes[file_name] if "Temp" in df_name), None)
+            if temp_df_name is None:
+                continue  # Skip if no temperature DataFrame exists
+
+            # Extract temperature DataFrame
+            temp_df = self.trimmed_dataframes[file_name][temp_df_name]
+            temperature = temp_df.iloc[:, 1].to_numpy()  
+
+            # Smooth the temperature data
+            smoothed_temperature = uniform_filter1d(temperature, size=smoothing_window)
+
+            for df_name in selected_df_names:
+                if df_name == temp_df_name:
+                    continue  # Skip temperature DataFrame
+
+                if df_name not in self.trimmed_dataframes[file_name]:
+                    continue  # Skip missing data
+
+                # Extract ion current values
+                ion_current = self.trimmed_dataframes[file_name][df_name].iloc[:, 1].to_numpy()
+
+                # Filter the data for left integration region
+                left_mask = (smoothed_temperature >= left_start_temp) & (smoothed_temperature <= left_end_temp)
+                left_temp_filtered = smoothed_temperature[left_mask]
+                left_ion_filtered = ion_current[left_mask]
+
+                # Filter the data for right integration region
+                right_mask = (smoothed_temperature >= right_start_temp) & (smoothed_temperature <= right_end_temp)
+                right_temp_filtered = smoothed_temperature[right_mask]
+                right_ion_filtered = ion_current[right_mask]
+
+                if len(left_temp_filtered) == 0 or len(right_temp_filtered) == 0:
+                    continue  # Avoid integration if no data is within bounds
+
+                # Perform integration using Simpson's Rule
+                left_integral = simps(left_ion_filtered, left_temp_filtered)
+                right_integral = simps(right_ion_filtered, right_temp_filtered)
+
+                # Compute ratio of left to right integration
+                ratio = left_integral / right_integral if right_integral != 0 else np.nan
+
+                # Store result
+                integration_ratios[dosage] = ratio
+
+        return integration_ratios
+
 
