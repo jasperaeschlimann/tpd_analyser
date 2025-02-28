@@ -185,6 +185,5 @@ class PlotWindow(QMdiSubWindow):
         Emits a signal to perform monolayer calibration (integration) on the selected files and DataFrames.
         """
         integration_boundaries = self.draggable_lines.get_trim_positions("integration")
-        print(integration_boundaries)
         smoothing_window = self.smooth_window_box.value()  # Get current smoothing value
         self.monolayer_calibration_requested.emit(self.selected_files_and_dfs, smoothing_window, integration_boundaries)
